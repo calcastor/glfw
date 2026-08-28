@@ -363,12 +363,26 @@ which API was used to create the current context may fail if you change this
 hint.  This can be resolved by having it load functions via @ref
 glfwGetProcAddress.
 
+This hint can be forced with the `GLFW_CONTEXT_CREATION_API` environment
+variable, which accepts `native`, `egl` or `osmesa`.  This is intended for
+applications that hard-code this hint and so cannot otherwise be pointed at
+a different context creation API.  When the variable is set, calls to @ref
+glfwWindowHint with this hint are ignored.
+
 @note __Wayland:__ The EGL API _is_ the native context creation API, so this hint
 will have no effect.
 
 @note __X11:__ On some Linux systems, creating contexts via both the native and EGL
 APIs in a single process will cause the application to segfault.  Stick to one
 API or the other on Linux for now.
+
+@note __macOS:__ `GLFW_NATIVE_CONTEXT_API` uses NSGL, which Apple has deprecated
+and which is limited to OpenGL 4.1.  `GLFW_EGL_CONTEXT_API` instead loads
+`libEGL.dylib`, which may be either ANGLE or Mesa; with Mesa it reaches the
+Zink driver, which implements OpenGL on top of Vulkan.  In both cases GLFW
+renders into a `CAMetalLayer` attached to the window's content view.  Use
+`_GLFW_EGL_LIBRARY` at compile time (see @ref compile_options) to pin a
+specific `libEGL.dylib`.
 
 @note __OSMesa:__ As its name implies, an OpenGL context created with OSMesa
 does not update the window contents when its buffers are swapped.  Use OpenGL

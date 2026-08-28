@@ -1051,6 +1051,34 @@ float _glfwTransformYCocoa(float y)
 }
 
 
+// Attach a CAMetalLayer to the content view
+//
+// Both the EGL and Vulkan paths present through a CAMetalLayer: Vulkan via
+// VK_EXT_metal_surface, and EGL via Mesa's macOS platform, which passes the
+// layer to Zink as a VkMetalSurfaceCreateInfoEXT.  ANGLE's Metal backend also
+// expects a CAMetalLayer as its EGLNativeWindowType.
+//
+static GLFWbool createLayer(_GLFWwindow* window)
+{
+    // NOTE: Create the layer here as makeBackingLayer should not return nil
+    window->ns.layer = [CAMetalLayer layer];
+    if (!window->ns.layer)
+    {
+        _glfwInputError(GLFW_PLATFORM_ERROR,
+                        "Cocoa: Failed to create layer for view");
+        return GLFW_FALSE;
+    }
+
+    if (window->ns.scaleFramebuffer)
+        [window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
+
+    [window->ns.view setLayer:window->ns.layer];
+    [window->ns.view setWantsLayer:YES];
+
+    return GLFW_TRUE;
+}
+
+
 //////////////////////////////////////////////////////////////////////////
 //////                       GLFW platform API                      //////
 //////////////////////////////////////////////////////////////////////////
@@ -1076,10 +1104,10 @@ GLFWbool _glfwCreateWindowCocoa(_GLFWwindow* window,
         }
         else if (ctxconfig->source == GLFW_EGL_CONTEXT_API)
         {
-            // EGL implementation on macOS use CALayer* EGLNativeWindowType so we
-            // need to get the layer for EGL window surface creation.
-            [window->ns.view setWantsLayer:YES];
-            window->ns.layer = [window->ns.view layer];
+            // EGL implementations on macOS use CALayer* as EGLNativeWindowType,
+            // so the layer has to exist before the window surface is created.
+            if (!createLayer(window))
+                return GLFW_FALSE;
 
             if (!_glfwInitEGL())
                 return GLFW_FALSE;
@@ -2173,6 +2201,12 @@ EGLenum _glfwGetEGLPlatformCocoa(EGLint** attribs)
         }
     }
 
+    // Mesa presents to the CAMetalLayer via Zink; when its macOS platform is
+    // available, select it explicitly rather than relying on the build-time
+    // default for EGL_DEFAULT_DISPLAY.
+    if (_glfw.egl.MESA_platform_macos)
+        return EGL_PLATFORM_MACOS_MESA;
+
     return 0;
 }
 
@@ -2214,20 +2248,8 @@ VkResult _glfwCreateWindowSurfaceCocoa(VkInstance instance,
 {
     @autoreleasepool {
 
-    // NOTE: Create the layer here as makeBackingLayer should not return nil
-    window->ns.layer = [CAMetalLayer layer];
-    if (!window->ns.layer)
-    {
-        _glfwInputError(GLFW_PLATFORM_ERROR,
-                        "Cocoa: Failed to create layer for view");
+    if (!createLayer(window))
         return VK_ERROR_EXTENSION_NOT_PRESENT;
-    }
-
-    if (window->ns.scaleFramebuffer)
-        [window->ns.layer setContentsScale:[window->ns.object backingScaleFactor]];
-
-    [window->ns.view setLayer:window->ns.layer];
-    [window->ns.view setWantsLayer:YES];
 
     VkResult err;
 

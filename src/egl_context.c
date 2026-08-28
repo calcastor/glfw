@@ -507,6 +507,8 @@ GLFWbool _glfwInitEGL(void)
             _glfwStringInExtensionString("EGL_ANGLE_platform_angle_metal", extensions);
         _glfw.egl.MESA_platform_surfaceless =
             _glfwStringInExtensionString("EGL_MESA_platform_surfaceless", extensions);
+        _glfw.egl.MESA_platform_macos =
+            _glfwStringInExtensionString("EGL_MESA_platform_macos", extensions);
     }
 
     if (_glfw.egl.EXT_platform_base)
@@ -823,6 +825,8 @@ GLFWbool _glfwCreateContextEGL(_GLFWwindow* window,
             _GLFW_OPENGL_LIBRARY,
 #elif defined(_WIN32)
 #elif defined(__APPLE__)
+            "libGL.dylib",
+            "libGL.1.dylib",
 #elif defined(__OpenBSD__) || defined(__NetBSD__)
             "libGL.so",
 #else

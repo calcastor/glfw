@@ -190,6 +190,7 @@ typedef void (APIENTRY * PFNGLFLUSHPROC)(void);
 #define EGL_PLATFORM_ANGLE_TYPE_METAL_ANGLE 0x3489
 #define EGL_PLATFORM_ANGLE_NATIVE_PLATFORM_TYPE_ANGLE 0x348f
 #define EGL_PLATFORM_SURFACELESS_MESA 0x31dd
+#define EGL_PLATFORM_MACOS_MESA 0x3531
 
 typedef int EGLint;
 typedef unsigned int EGLBoolean;
@@ -876,6 +877,7 @@ struct _GLFWlibrary
         bool            ANGLE_platform_angle_vulkan;
         bool            ANGLE_platform_angle_metal;
         bool            MESA_platform_surfaceless;
+        bool            MESA_platform_macos;
 
         void*           handle;
 

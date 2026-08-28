@@ -257,6 +257,47 @@ GLFWAPI GLFWwindow* glfwCreateWindow(int width, int height,
     return (GLFWwindow*) window;
 }
 
+// Returns the context creation API forced by the environment, or zero
+//
+// The GLFW_CONTEXT_CREATION_API environment variable forces the context
+// creation API for every window.  This exists for applications that hard-code
+// the matching window hint and so cannot be pointed at a different context
+// creation API, for example when running them on an EGL implementation like
+// ANGLE or Mesa on a platform whose native API is something else.
+//
+// Unlike the window hint, this is an override: when it is set, calls to
+// glfwWindowHint(GLFW_CONTEXT_CREATION_API, ...) are ignored.
+//
+static int contextCreationAPIOverride(void)
+{
+    static int source = -1;
+    const char* name;
+
+    if (source != -1)
+        return source;
+
+    source = 0;
+
+    name = getenv("GLFW_CONTEXT_CREATION_API");
+    if (name && name[0])
+    {
+        if (strcmp(name, "native") == 0)
+            source = GLFW_NATIVE_CONTEXT_API;
+        else if (strcmp(name, "egl") == 0)
+            source = GLFW_EGL_CONTEXT_API;
+        else if (strcmp(name, "osmesa") == 0)
+            source = GLFW_OSMESA_CONTEXT_API;
+        else
+        {
+            _glfwInputError(GLFW_INVALID_VALUE,
+                            "Invalid GLFW_CONTEXT_CREATION_API environment variable value '%s'",
+                            name);
+        }
+    }
+
+    return source;
+}
+
 void glfwDefaultWindowHints(void)
 {
     _GLFW_REQUIRE_INIT();
@@ -264,7 +305,9 @@ void glfwDefaultWindowHints(void)
     // The default is OpenGL with minimum version 1.0
     memset(&_glfw.hints.context, 0, sizeof(_glfw.hints.context));
     _glfw.hints.context.client = GLFW_OPENGL_API;
-    _glfw.hints.context.source = GLFW_NATIVE_CONTEXT_API;
+    _glfw.hints.context.source = contextCreationAPIOverride();
+    if (!_glfw.hints.context.source)
+        _glfw.hints.context.source = GLFW_NATIVE_CONTEXT_API;
     _glfw.hints.context.major  = 1;
     _glfw.hints.context.minor  = 0;
 
@@ -406,7 +449,9 @@ GLFWAPI void glfwWindowHint(int hint, int value)
             _glfw.hints.context.client = value;
             return;
         case GLFW_CONTEXT_CREATION_API:
-            _glfw.hints.context.source = value;
+            // Ignored when the environment forces a context creation API
+            if (!contextCreationAPIOverride())
+                _glfw.hints.context.source = value;
             return;
         case GLFW_CONTEXT_VERSION_MAJOR:
             _glfw.hints.context.major = value;
